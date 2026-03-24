@@ -1,0 +1,5 @@
+{
+  "name": "Yoanna Online",
+  "description": "A chic and modern voice assistant for Yoanna Georgieva, providing information about her professional background and skills.",
+  "requestFramePermissions": ["microphone"]
+}
