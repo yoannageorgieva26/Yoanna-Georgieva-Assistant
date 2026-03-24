@@ -95,6 +95,12 @@ export default function App() {
   const startAssistant = async () => {
     try {
       setError(null);
+      
+      // Check if browser supports getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Your browser does not support microphone access.");
+      }
+
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
@@ -107,7 +113,7 @@ export default function App() {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } }, // Puck has a nice professional tone
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
           },
           systemInstruction: SYSTEM_INSTRUCTION,
         },
@@ -116,7 +122,6 @@ export default function App() {
             setIsActive(true);
             setIsListening(true);
             
-            // Start processing microphone input
             const source = audioContextRef.current!.createMediaStreamSource(stream);
             const processor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
             processorRef.current = processor;
@@ -169,9 +174,16 @@ export default function App() {
       });
 
       sessionRef.current = session;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to start assistant:", err);
-      setError("Could not access microphone or connect to AI.");
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message?.includes('Permission dismissed')) {
+        setError("Microphone access is required. Please allow microphone permissions in your browser settings and try again.");
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setError("No microphone found. Please connect a microphone and try again.");
+      } else {
+        setError("Could not start the assistant. Please check your connection and try again.");
+      }
+      stopAssistant();
     }
   };
 
